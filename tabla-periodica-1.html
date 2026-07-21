@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabla Periódica Interactiva</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --fondo: #06060f;
+            --acento1: #00ffff;
+            --acento2: #f0c040;
+            --fuente-titulo: 'Orbitron', sans-serif;
+            --fuente-datos: 'Courier New', monospace;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 0;
+            background: var(--fondo);
+            color: #fff;
+            font-family: var(--fuente-datos);
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+        .header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: rgba(6, 6, 15, 0.95);
+            padding: 15px 20px;
+            z-index: 1000;
+            border-bottom: 2px solid var(--acento1);
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-family: var(--fuente-titulo);
+            color: var(--acento1);
+            font-size: 1.8rem;
+        }
+        .search-container {
+            position: relative;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .search-toggle {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--acento1);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px 15px 12px 40px;
+            font-size: 1rem;
+            border: 1px solid var(--acento1);
+            border-radius: 25px;
+            background: #111;
+            color: #ffffff;
+            font-family: var(--fuente-datos);
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .search-input.active {
+            opacity: 1;
+            height: 45px;
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+        .filtros {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+            padding: 10px 0;
+        }
+        .filtro-btn {
+            padding: 8px 15px;
+            border: 1px solid var(--acento1);
+            border-radius: 20px;
+            background: transparent;
+            color: var(--acento1);
+            cursor: pointer;
+            font-family: var(--fuente-datos);
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+        .filtro-btn:hover, .filtro-btn.activo {
+            background: var(--acento2);
+            color: #000;
+        }
+        .tabla {
+            display: grid;
+            grid-template-columns: repeat(18, 1fr);
+            gap: 8px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .elemento {
+            background: #111;
+            padding: 12px 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .elemento:hover {
+            transform: scale(1.08);
+            z-index: 10;
+        }
+        .elemento .simbolo {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--acento1);
+            margin-bottom: 3px;
+        }
+        .elemento .nombre {
+            font-size: 0.7rem;
+            color: #ccc;
+        }
+        .elemento .numero {
+            font-size: 0.75rem;
+            color: var(--acento2);
+            margin-top: 3px;
+        }
+        .panel {
+            position: fixed;
+            top: 0; right: -400px;
+            width: 380px;
+            height: 100vh;
+            background: #0a0a1a;
+            padding: 30px 25px;
+            border-left: 3px solid var(--acento1);
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 2000;
+            transition: right 0.3s;
+        }
+        .panel.active {
+            display: flex;
+            right: 0;
+        }
+        .cerrar {
+            position: absolute;
+            top: 15px; right: 15px;
+            background: none;
+            border: none;
+            color: var(--acento1);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .panel h2 {
+            margin: 0 0 15px 0;
+            color: var(--acento1);
+            font-family: var(--fuente-titulo);
+            font-size: 1.6rem;
+        }
+        .panel p {
+            margin: 10px 0;
+            line-height: 1.4;
+        }
+        .panel .etiqueta {
+            color: var(--acento2);
+            font-weight: bold;
+        }
+        .orbital-visual {
+            width: 200px;
+            height: 200px;
+            margin: 15px auto;
+            position: relative;
+        }
+        #orbitalCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid var(--acento1);
+        }
+        .element-data {
+            margin-top: 15px;
+        }
+        @media (max-width: 900px) {
+            .tabla { grid-template-columns: repeat(6, 1fr); }
+            .panel { width: 100%; right: -100%; }
+            .search-container { max-width: 300px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Tabla Periódica Interactiva</h1>
+        <div class="search-container">
+            <button class="search-toggle" id="searchToggle">
+                🔍
+            </button>
+            <input type="search" placeholder="Buscar elemento..." class="search-input" id="buscador">
+        </div>
+        <div class="filtros"></div>
+    </div>
+    <div class="tabla"></div>
+    <div class="panel">
+        <button class="cerrar">&times;</button>
+        <h2 class="nombre-elem"></h2>
+        <div class="orbital-visual">
+            <canvas id="orbitalCanvas"></canvas>
+        </div>
+        <div class="element-data">
+            <p><span class="etiqueta">Símbolo:</span> <span class="simbolo-elem"></span></p>
+            <p><span class="etiqueta">Número atómico:</span> <span class="numero-elem"></span></p>
+            <p><span class="etiqueta">Masa:</span> <span class="masa-elem"></span></p>
+            <p><span class="etiqueta">Categoría:</span> <span class="categoria-elem"></span></p>
+            <p><span class="etiqueta">Configuración electrónica:</span> <span class="config-elem"></span></p>
+            <p><span class="etiqueta">Dato curioso:</span> <span class="curioso-elem"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Definición de categorías en español
+        const colores = {
+            "Metal Alcalino": "#ff6b6b",
+            "Metal Alcalino Terroso": "#4ecdc4",
+            "Metal de Transición": "#1a535c",
+            "Metal Post-Transición": "#45b7d1",
+            "Metaloides": "#96ceb4",
+            "No metalo de Poliatómico": "#feca57",
+            "No metalo Diatómico": "#ff9ff3",
+            "Halógeno": "#f368e0",
+            "Gas Noble": "#54a0ff",
+            "Lantánidos": "#5f27cd",
+            "Actínidos": "#542e75"
+        };
+
+        const categorias = ["Metal Alcalino", "Metal Alcalino Terroso", "Metal de Transición", "Metal Post-Transición", "Metaloides", "No metalo de Poliatómico", "No metalo Diatómico", "Halógeno", "Gas Noble", "Lantánidos", "Actínidos"];
+
+        // Motor de dibujo atómico pura (sin dependencias)
+        function AtomEngine(canvas, electronsPerLevel) {
+            const ctx = canvas.getContext('2d');
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const angles = electronsPerLevel.map(n =>
+                Array(n).fill(0).map((_,i) =>
+                    (2 * Math.PI * i) / n
+                )
+            );
+            const speeds = [0.04, 0.025, 0.015, 0.01, 0.007, 0.005, 0.003];
+
+            function resize() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+            }
+
+            resize();
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Núcleo
+                ctx.beginPath();
+                ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+                ctx.fillStyle = '#f0c040';
+                ctx.fill();
+
+                // Por cada nivel
+                electronsPerLevel.forEach((count, level) => {
+                    const radius = (level + 1) * 35;
+
+                    // Dibujar orbital
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(0,255,255,0.15)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    // Dibujar y mover electrones
+                    angles[level].forEach((angle, i) => {
+                        const x = cx + radius * Math.cos(angle);
+                        const y = cy + radius * Math.sin(angle);
+                        ctx.beginPath();
+                        ctx.arc(x, y, 4, 0, Math.PI * 2);
+                        ctx.fillStyle = '#00ffff';
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = '#00ffff';
+                        ctx.fill();
+                        angles[level][i] += speeds[level];
+                    });
+                });
+
+                requestAnimationFrame(draw);
+            }
+
+            draw();
+        }
+
+        // Calcular electronsPerLevel desde el número atómico
+        function calculateElectronsPerLevel(atomicNumber) {
+            const maxPerLevel = [2, 8, 18, 32, 32, 18, 8]; // Distribución máxima por nivel
+            let electrons = atomicNumber;
+            let result = [];
+
+            for (let i = 0; i < maxPerLevel.length; i++) {
+                const currentLevelMax = maxPerLevel[i];
+                result.push(Math.min(currentLevelMax, electrons));
+                electrons -= result[i];
+                if (electrons === 0) break;
+            }
+
+            return result;
+        }
+
+        function inicializarOrbitales() {
+            const paneles = document.querySelectorAll('.panel');
+            paneles.forEach(panel => {
+                panel.addEventListener('transitionend', function() {
+                    if (this.classList.contains('active')) {
+                        const canvas = this.querySelector('#orbitalCanvas');
+                        if (canvas && this.elementoActivo) {
+                            // Calcular electronsPerLevel desde el número atómico
+                            const electronsPerLevel = calculateElectronsPerLevel(this.elementoActivo.atomic_number);
+                            // Llamar al motor de dibujo
+                            AtomEngine(canvas, electronsPerLevel);
+                        }
+                    }
+                });
+            });
+        }
+
+        // Mapeo de categorías en español para las traducciones
+        function traducirCategoria(categoriaEn) {
+            const mapeo = {
+                "alkali metal": "Metal Alcalino",
+                "alkaline earth metal": "Metal Alcalino Terroso",
+                "transition metal": "Metal de Transición",
+                "post-transition metal": "Metal Post-Transición",
+                "metalloid": "Metaloides",
+                "polyatomic nonmetal": "No metalo de Poliatómico",
+                "diatomic nonmetal": "No metalo Diatómico",
+                "halogen": "Halógeno",
+                "noble gas": "Gas Noble",
+                "lanthanide": "Lantánidos",
+                "actinide": "Actínidos"
+            };
+            return mapeo[categoriaEn] || categoriaEn;
+        }
+
+        // Datos de elementos (con 118 elementos completos)
+        const datosElementos = [
+            {"name":"Hidrógeno","symbol":"H","atomic_number":1,"atomic_mass":1.008,"category":"No metalo Diatómico","electron_configuration":"1s1","curious_fact":"Es el elemento más abundante en el universo, constituyendo alrededor del 75% de la masa bariónica."},
+            {"name":"Helio","symbol":"He","atomic_number":2,"atomic_mass":4.0026,"category":"Gas Noble","electron_configuration":"1s2","curious_fact":"Es el elemento más ligero y el segundo elemento más abundante en el universo."},
+            {"name":"Litio","symbol":"Li","atomic_number":3,"atomic_mass":6.94,"category":"Metal Alcalino","electron_configuration":"[He] 2s1","curious_fact":"Se usa en baterías de iones de litio y ha mostrado propiedades terapéuticas en trastornos mentales."},
+            {"name":"Berilio","symbol":"Be","atomic_number":4,"atomic_mass":9.0122,"category":"Metal Alcalino Terroso","electron_configuration":"[He] 2s2","curious_fact":"Es extremadamente tóxico y su polvo puede causar enfermedades pulmonares."},
+            {"name":"Boro","symbol":"B","atomic_number":5,"atomic_mass":10.81,"category":"Metaloides","electron_configuration":"2s2 2p1","curious_fact":"Esencial para plantas, pero en exceso es tóxico para animales."},
+            {"name":"Carbono","symbol":"C","atomic_number":6,"atomic_mass":12.011,"category":"No metalo de Poliatómico","electron_configuration":"2s2 2p2","curious_fact":"Existen más de 10 millones de compuestos conocidos de carbono."},
+            {"name":"Nitrógeno","symbol":"N","atomic_number":7,"atomic_mass":14.007,"category":"No metalo Diatómico","electron_configuration":"2s2 2p3","curious_fact":"Representa el 78% de la atmósfera terrestre."},
+            {"name":"Oxígeno","symbol":"O","atomic_number":8,"atomic_mass":15.999,"category":"No metalo Diatómico","electron_configuration":"2s2 2p4","curious_fact":"Es el elemento más abundante en la corteza terrestre."},
+            {"name":"Flúor","symbol":"F","atomic_number":9,"atomic_mass":18.998,"category":"Halógeno","electron_configuration":"2s2 2p5","curious_fact":"Es el elemento más electrónico del período."},
+            {"name":"Neón","symbol":"Ne","atomic_number":10,"atomic_mass":20.180,"category":"Gas Noble","electron_configuration":"2s2 2p6","curious_fact":"Emite luz rojo al eléctrico y se usaba en neón luminoso."},
+            {"name":"Sodio","symbol":"Na","atomic_number":11,"atomic_mass":22.990,"category":"Metal Alcalino","electron_configuration":"[Ne] 3s1","curious_fact":"Es el metal más ligero y se funde a temperaturas por debajo de la helada."},
+            {"name":"Magnesio","symbol":"Mg","atomic_number":12,"atomic_mass":24.305,"category":"Metal Alcalino Terroso","electron_configuration":"[Ne] 3s2","curious_fact":"Es esencial para huesos y dientes humanos."},
+            {"name":"Aluminio","symbol":"Al","atomic_number":13,"atomic_mass":26.982,"category":"Metal Post-Transición","electron_configuration":"[Ne] 3s2 3p1","curious_fact":"Es el metal más abundante en la corteza terrestre."},
+            {"name":"Silicio","symbol":"Si","atomic_number":14,"atomic_mass":28.085,"category":"Metaloides","electron_configuration":"[Ne] 3s2 3p2","curious_fact":"Es la base de los semiconductor y componentes electrónicos."},
+            {"name":"Fósforo","symbol":"P","atomic_number":15,"atomic_mass":30.974,"category":"No metalo de Poliatómico","electron_configuration":"[Ne] 3s2 3p3","curious_fact":"Existen cinco formas todosólidas con propiedades muy diferentes."},
+            {"name":"Azufre","symbol":"S","atomic_number":16,"atomic_mass":32.065,"category":"No metalo de Poliatómico","electron_configuration":"[Ne] 3s2 3p4","curious_fact":"Produce azufre de fósforo al combinarse con fósforo."},
+            {"name":"Cloro","symbol":"Cl","atomic_number":17,"atomic_mass":35.453,"category":"Halógeno","electron_configuration":"[Ne] 3s2 3p5","curious_fact":"Es el elemento más abundante en la atmósfera, aunque como cloruro."},
+            {"name":"Argón","symbol":"Ar","atomic_number":18,"atomic_mass":39.948,"category":"Gas Noble","electron_configuration":"[Ne] 3s2 3p6","curious_fact":"Es inerte y se usa en luces de neón y argón."},
+            {"name":"Potasio","symbol":"K","atomic_number":19,"atomic_mass":39.098,"category":"Metal Alcalino","electron_configuration":"[Ar] 4s1","curious_fact":"Es esencial para la función nerviosa humana."},
+            {"name":"Calcio","symbol":"Ca","atomic_number":20,"atomic_mass":40.078,"category":"Metal Alcalino Terroso","electron_configuration":"[Ar] 4s2","curious_fact":"Es el quinto elemento más abundante en la corteza terrestre."},
+            {"name":"Escandio","symbol":"Sc","atomic_number":21,"atomic_mass":44.956,"category":"Metal de Transición","electron_configuration":"[Ar] 3d1 4s2","curious_fact":"Da color rosa a ciertos cristales y es usado en aleaciones."},
+            {"name":"Titanio","symbol":"Ti","atomic_number":22,"atomic_mass":47.867,"category":"Metal de Transición","electron_configuration":"[Ar] 3d2 4s2","curious_fact":"Es resistente a la corrosión y se usa en equipos aerospace."},
+            {"name":"Vanadio","symbol":"V","atomic_number":23,"atomic_mass":50.942,"category":"Metal de Transición","electron_configuration":"[Ar] 3d3 4s2","curious_fact":"Forma varios compuestos con colores llamativos."},
+            {"name":"Cromo","symbol":"Cr","atomic_number":24,"atomic_mass":51.996,"category":"Metal de Transición","electron_configuration":"[Ar] 3d5 4s1","curious_fact":"Su nivel de oxidación más alto es +6."},
+            {"name":"Manganeso","symbol":"Mn","atomic_number":25,"atomic_mass":54.938,"category":"Metal de Transición","electron_configuration":"[Ar] 3d5 4s2","curious_fact":"Es esencial para la función sanguínea (manganeso)."},
+            {"name":"Hierro","symbol":"Fe","atomic_number":26,"atomic_mass":55.845,"category":"Metal de Transición","electron_configuration":"[Ar] 3d6 4s2","curious_fact":"Es el elemento más común en la Tierra y forma el núcleo."},
+            {"name":"Cobalto","symbol":"Co","atomic_number":27,"atomic_mass":58.933,"category":"Metal de Transición","electron_configuration":"[Ar] 3d7 4s2","curious_fact":"Da color azul a los aleaciones como el acero inoxidable."},
+            {"name":"Níquel","symbol":"Ni","atomic_number":28,"atomic_mass":58.693,"category":"Metal de Transición","electron_configuration":"[Ar] 3d8 4s2","curious_fact":"Es ferromagnetico y se usa en imanes."},
+            {"name":"Cobre","symbol":"Cu","atomic_number":29,"atomic_mass":63.546,"category":"Metal de Transición","electron_configuration":"[Ar] 3d10 4s1","curious_fact":"Tiene propiedades dieléctricas y es un excelente conductor."},
+            {"name":"Zinc","symbol":"Zn","atomic_number":30,"atomic_mass":65.38,"category":"Metal de Transición","electron_configuration":"[Ar] 3d10 4s2","curious_fact":"Es blanco y se usa en monedas y fundiciones."},
+            {"name":"Galio","symbol":"Ga","atomic_number":31,"atomic_mass":69.723,"category":"Metal Post-Transición","electron_configuration":"[Ar] 3d10 4s2 4p1","curious_fact":"Se derrite a temperatura ambiente y se usa en pantallas LCD."},
+            {"name":"Germano","symbol":"Ge","atomic_number":32,"atomic_mass":72.630,"category":"Metal Post-Transición","electron_configuration":"[Ar] 3d10 4s2 4p2","curious_fact":"Es semiconductora y se usaba en teléfonos móviles antiguos."},
+            {"name":"Arsénico","symbol":"As","atomic_number":33,"atomic_mass":74.922,"category":"Metaloides","electron_configuration":"[Ar] 3d10 4s2 4p3","curious_fact":"Es tóxico y se usaba en venenos antiguos."},
+            {"name":"Selenio","symbol":"Se","atomic_number":34,"atomic_mass":78.96,"category":"No metalo de Poliatómico","electron_configuration":"[Ar] 3d10 4s2 4p4","curious_fact":"Es esencial para la función visual humana."},
+            {"name":"Bromo","symbol":"Br","atomic_number":35,"atomic_mass":79.904,"category":"Halógeno","electron_configuration":"[Ar] 3d10 4s2 4p5","curious_fact":"Es el único elementos líquido estable a temperatura ambiente."},
+            {"name":"Kriptón","symbol":"Kr","atomic_number":36,"atomic_mass":83.798,"category":"Gas Noble","electron_configuration":"[Ar] 3d10 4s2 4p6","curious_fact":"Se usaba en neón luminoso y lámparas de luz blanca."},
+            {"name":"Rubidio","symbol":"Rb","atomic_number":37,"atomic_mass":85.468,"category":"Metal Alcalino","electron_configuration":"[Kr] 5s1","curious_fact":"Es más reactivo que el sodio."},
+            {"name":"Estroncio","symbol":"Sr","atomic_number":38,"atomic_mass":87.62,"category":"Metal Alcalino Terroso","electron_configuration":"[Kr] 5s2","curious_fact":"Se usa en fuegos artificiales rojos."},
+            {"name":"Itrio","symbol":"Y","atomic_number":39,"atomic_mass":88.906,"category":"Metal de Transición","electron_configuration":"[Kr] 4d1 5s2","curious_fact":"Es esencial para láseres de estado sólido."},
+            {"name":"Zirconio","symbol":"Zr","atomic_number":40,"atomic_mass":91.224,"category":"Metal de Transición","electron_configuration":"[Kr] 4d2 5s2","curious_fact":"Es resistente a la radiación y se usa en reactors nucleares."},
+            {"name":"Niobio","symbol":"Nb","atomic_number":41,"atomic_mass":92.906,"category":"Metal de Transición","electron_configuration":"[Kr] 4d4 5s1","curious_fact":"Su color es un gris azulado y se usa en supercondensadores."},
+            {"name":"Molibdeno","symbol":"Mo","atomic_number":42,"atomic_mass":95.95,"category":"Metal de Transición","electron_configuration":"[Kr] 4d5 5s1","curious_fact":"Es el elemento más denso después del platino."},
+            {"name":"Tecnecio","symbol":"Tc","atomic_number":43,"atomic_mass":98,"category":"Metal de Transición","electron_configuration":"[Kr] 4d5 5s2","curious_fact":"Es el primer elemento sintético descubierto."},
+            {"name":"Rutenio","symbol":"Ru","atomic_number":44,"atomic_mass":101.07,"category":"Metal de Transición","electron_configuration":"[Kr] 4d7 5s1","curious_fact":"Es resistente a la corrosión y se usa en catalizadores."},
+            {"name":"Rodio","symbol":"Rh","atomic_number":45,"atomic_mass":102.91,"category":"Metal de Transición","electron_configuration":"[Kr] 4d8 5s1","curious_fact":"Es el metal más catalítico del grupo 8."},
+            {"name":"Paladio","symbol":"Pd","atomic_number":46,"atomic_mass":106.42,"category":"Metal de Transición","electron_configuration":"[Kr] 4d10 5s0","curious_fact":"Es fiel a sí misma y se usa en catalizadores automotrices."},
+            {"name":"Plata","symbol":"Ag","atomic_number":47,"atomic_mass":107.87,"category":"Metal de Transición","electron_configuration":"[Kr] 4d10 5s1","curious_fact":"Tiene la mayor conductividad térmica de los metales."},
+            {"name":"Cadmio","symbol":"Cd","atomic_number":48,"atomic_mass":112.41,"category":"Metal de Transición","electron_configuration":"[Kr] 4d10 5s2","curious_fact":"Su color amarillo brillante da nombre al cadmio amarillo."},
+            {"name":"Indio","symbol":"In","atomic_number":49,"atomic_mass":114.82,"category":"Metal Post-Transición","electron_configuration":"[Kr] 4d10 5s2 5p1","curious_fact":"Se usaba en soldaduras y pantallas de televisor."},
+            {"name":"Estaño","symbol":"Sn","atomic_number":50,"atomic_mass":118.71,"category":"Metal Post-Transición","electron_configuration":"[Kr] 4d10 5s2 5p2","curious_fact":"Tiene dos estados metálicos con propiedades opuestas."},
+            {"name":"Antimonio","symbol":"Sb","atomic_number":51,"atomic_mass":121.76,"category":"Metaloides","electron_configuration":"[Kr] 4d10 5s2 5p3","curious_fact":"Es un semiconductor y se usa en aleaciones."},
+            {"name":"Teluro","symbol":"Te","atomic_number":52,"atomic_mass":127.6,"category":"Metaloides","electron_configuration":"[Kr] 4d10 5s2 5p4","curious_fact":"Es esencial para componentes fotovoltaicos."},
+            {"name":"Yodo","symbol":"I","atomic_number":53,"atomic_mass":126.90,"category":"Halógeno","electron_configuration":"[Kr] 4d10 5s2 5p5","curious_fact":"Es esencial para la función tiroidea humana."},
+            {"name":"Xenón","symbol":"Xe","atomic_number":54,"atomic_mass":131.29,"category":"Gas Noble","electron_configuration":"[Kr] 4d10 5s2 5p6","curious_fact":"Se usaba en neón luminoso y lámparas de luz blanca."},
+            {"name":"Cesio","symbol":"Cs","atomic_number":55,"atomic_mass":132.91,"category":"Metal Alcalino","electron_configuration":"[Xe] 6s1","curious_fact":"Es el metal más reactivo del período."},
+            {"name":"Bario","symbol":"Ba","atomic_number":56,"atomic_mass":137.33,"category":"Metal Alcalino Terroso","electron_configuration":"[Xe] 6s2","curious_fact":"Se usa en tubos de rayos catódicos y fuegos artificiales."},
+            {"name":"Lantano","symbol":"La","atomic_number":57,"atomic_mass":138.91,"category":"Lantánidos","electron_configuration":"[Xe] 5d1 6s2","curious_fact":"Da nombre a los lantanidos y se usa en imanes."},
+            {"name":"Cerio","symbol":"Ce","atomic_number":58,"atomic_mass":140.12,"category":"Lantánidos","electron_configuration":"[Xe] 5d1 6s2","curious_fact":"Es el elemento más abundante de los lantanidos."},
+            {"name":"Praseodimio","symbol":"Pr","atomic_number":59,"atomic_mass":140.91,"category":"Lantánidos","electron_configuration":"[Xe] 5d3 6s2","curious_fact":"Da color amarillo a ciertos cristales."},
+            {"name":"Neodimio","symbol":"Nd","atomic_number":60,"atomic_mass":144.24,"category":"Lantánidos","electron_configuration":"[Xe] 5d4 6s2","curious_fact":"Es esencial para imanes de imán neodimio."},
+            {"name":"Prometio","symbol":"Pm","atomic_number":61,"atomic_mass":145,"category":"Lantánidos","electron_configuration":"[Xe] 5d5 6s2","curious_fact":"Es radiactivo y se usa en fuentes de radiación."},
+            {"name":"Samario","symbol":"Sm","atomic_number":62,"atomic_mass":150.36,"category":"Lantánidos","electron_configuration":"[Xe] 5d6 6s2","curious_fact":"Se usa en imanes y lámparas de neón."},
+            {"name":"Europio","symbol":"Eu","atomic_number":63,"atomic_mass":151.96,"category":"Lantánidos","electron_configuration":"[Xe] 5d7 6s2","curious_fact":"Da color rojo a los phosphorescentes."},
+            {"name":"Gadolinio","symbol":"Gd","atomic_number":64,"atomic_mass":157.25,"category":"Lantánidos","electron_configuration":"[Xe] 5d8 6s2","curious_fact":"Cambia su material magnético cerca de 20°C."},
+            {"name":"Terbio","symbol":"Tb","atomic_number":65,"atomic_mass":158.93,"category":"Lantánidos","electron_configuration":"[Xe] 5d9 6s2","curious_fact":"Es verde y se usa en pantallas de visualización."},
+            {"name":"Disprosio","symbol":"Dy","atomic_number":66,"atomic_mass":162.5,"category":"Lantánidos","electron_configuration":"[Xe] 5d10 6s2","curious_fact":"Es esencial para imanes de alta temperatura."},
+            {"name":"Holmio","symbol":"Ho","atomic_number":67,"atomic_mass":164.93,"category":"Lantánidos","electron_configuration":"[Xe] 5d11 6s2","curious_fact":"Es el elemento con más isótopos estabilizados."},
+            {"name":"Erbio","symbol":"Er","atomic_number":68,"atomic_mass":167.26,"category":"Lantánidos","electron_configuration":"[Xe] 5d13 6s2","curious_fact":"Se usa en láseres de estado sólido."},
+            {"name":"Tulio","symbol":"Tm","atomic_number":69,"atomic_mass":168.93,"category":"Lantánidos","electron_configuration":"[Xe] 5d14 6s2","curious_fact":"Es el segundo elemento más electrónico de los lantanidos."},
+            {"name":"Iterbio","symbol":"Yb","atomic_number":70,"atomic_mass":173.05,"category":"Lantánidos","electron_configuration":"[Xe] 5d14 6s2","curious_fact":"Tiene el punto de fusión más alto de los lantanidos."},
+            {"name":"Lutecio","symbol":"Lu","atomic_number":71,"atomic_mass":174.97,"category":"Lantánidos","electron_configuration":"[Xe] 5d15 6s2","curious_fact":"Es el elemento más inestable de los lantanidos."},
+            {"name":"Haflnio","symbol":"Hf","atomic_number":72,"atomic_mass":178.49,"category":"Metal de Transición","electron_configuration":"[Xe] 4f14 5d2 6s2","curious_fact":"Es muy similar al zirconio y se usa como alternativa."},
+            {"name":"Tantalio","symbol":"Ta","atomic_number":73,"atomic_mass":180.95,"category":"Metal de Transición","electron_configuration":"[Xe] 4f14 5d3 6s2","curious_fact":"Es resistente a la corrosión y se usa en capacitores."},
+            {"name":"Tungsteno","symbol":"W","atomic_number":74,"atomic_mass":183.84,"category":"Metal de Transición","electron_configuration":"[Xe] 4f14 5d4 6s2","curious_fact":"Tiene el punto de fusión más alto de los elementos."},
+            {"name":"Renio","symbol":"Re","atomic_number":75,"atomic_mass":186.21,"category":"Metal de Transición","electron_configuration":"[Xe] 4f14 5d5 6s2","curious_fact":"Es el segundo elemento más denso después del oro."},
+            {"name":"Osmio","symbol":"Os","atomic_number":76,"atomic_mass":190.23,"category":"Metal de Transición","electron_configuration":"[Xe] 4f14 5d6 6s2","curious_fact":"Es el elemento más denso conocido."},
+            {"name":"Iridio","symbol":"Ir","atomic_number":77,"atomic_mass":192.22,"category":"Metal de Transición","electron_configuration":"[Xe] 4f14 5d7 6s2","curious_fact":"Tiene el punto de fusión más alto del período."},
+            {"name":"Platino","symbol":"Pt","atomic_number":78,"atomic_mass":195.08,"category":"Metal de Transición","electron_configuration":"[Xe] 4f14 5d9 6s1","curious_fact":"Es fiel a sí misma y se usa en catalizadores."},
+            {"name":"Oro","symbol":"Au","atomic_number":79,"atomic_mass":196.97,"category":"Metal de Transición","electron_configuration":"[Xe] 4f14 5d10 6s1","curious_fact":"Ha sido valorada como moneda por miles de años."},
+            {"name":"Mercurio","symbol":"Hg","atomic_number":80,"atomic_mass":200.59,"category":"Metal de Transición","electron_configuration":"[Xe] 4f14 5d10 6s2","curious_fact":"Es el único metal que es líquido a temperatura ambiente."},
+            {"name":"Talio","symbol":"Tl","atomic_number":81,"atomic_mass":204.38,"category":"Metal Post-Transición","electron_configuration":"[Xe] 4f14 5d10 6s2 6p1","curious_fact":"Es tóxico y se usaba en remedios caseros."},
+            {"name":"Plomo","symbol":"Pb","atomic_number":82,"atomic_mass":207.2,"category":"Metal Post-Transición","electron_configuration":"[Xe] 4f14 5d10 6s2 6p2","curious_fact":"Es el elemento más pesado estable conocido."},
+            {"name":"Bismuto","symbol":"Bi","atomic_number":83,"atomic_mass":208.98,"category":"Metal Post-Transición","electron_configuration":"[Xe] 4f14 5d10 6s2 6p3","curious_fact":"Tiene el punto de fusión más alto del período 6."},
+            {"name":"Polonio","symbol":"Po","atomic_number":84,"atomic_mass":209,"category":"Metaloides","electron_configuration":"[Xe] 4f14 5d10 6s2 6p4","curious_fact":"Es tan tóxico que su dosis letal es de 0.1 mg."},
+            {"name":"Astato","symbol":"At","atomic_number":85,"atomic_mass":210,"category":"Metaloides","electron_configuration":"[Xe] 4f14 5d10 6s2 6p5","curious_fact":"Es radiactivo y extremadamente tóxico."},
+            {"name":"Radón","symbol":"Rn","atomic_number":86,"atomic_mass":222,"category":"Gas Noble","electron_configuration":"[Xe] 4f14 5d10 6s2 6p6","curious_fact":"Es el elemento más radiactivo estable."},
+            {"name":"Francio","symbol":"Fr","atomic_number":87,"atomic_mass":223,"category":"Metal Alcalino","electron_configuration":"[Rn] 7s1","curious_fact":"Es el metal más reactivo y extremadamente tóxico."},
+            {"name":"Radio","symbol":"Ra","atomic_number":88,"atomic_mass":226,"category":"Metal Alcalino Terroso","electron_configuration":"[Rn] 7s2","curious_fact":"Fue usado en tratamientos de piel y como cura."},
+            {"name":"Actinio","symbol":"Ac","atomic_number":89,"atomic_mass":227,"category":"Actínidos","electron_configuration":"[Rn] 6d1 7s2","curious_fact":"Es el padre de los actínidos y se usa en fuentes de energía."},
+            {"name":"Torio","symbol":"Th","atomic_number":90,"atomic_mass":232,"category":"Actínidos","electron_configuration":"[Rn] 6d2 7s2","curious_fact":"Se usaba en soplete de luz y reactores nucleares."},
+            {"name":"Protactinio","symbol":"Pa","atomic_number":91,"atomic_mass":231,"category":"Actínidos","electron_configuration":"[Rn] 6d1 7s2","curious_fact":"Es esencial para datar sedimentos con carbono 14."},
+            {"name":"Uranio","symbol":"U","atomic_number":92,"atomic_mass":238,"category":"Actínidos","electron_configuration":"[Rn] 5f3 6d1 7s2","curious_fact":"Fue el primer elemento en ser reconocido como elemento."},
+            {"name":"Neptunio","symbol":"Np","atomic_number":93,"atomic_mass":237,"category":"Actínidos","electron_configuration":"[Rn] 5f4 6d1 7s2","curious_fact":"Fue nombrado en honor al planeta Neptuno."},
+            {"name":"Plutonio","symbol":"Pu","atomic_number":94,"atomic_mass":244,"category":"Actínidos","electron_configuration":"[Rn] 5f6 7s2","curious_fact":"Fue usado en la bomba de Hiroshima."},
+            {"name":"Americio","symbol":"Am","atomic_number":95,"atomic_mass":243,"category":"Actínidos","electron_configuration":"[Rn] 5f5 7s2","curious_fact":"Se usa en detectores de humo de cigarrillo."},
+            {"name":"Cúrcumo","symbol":"Cm","atomic_number":96,"atomic_mass":247,"category":"Actínidos","electron_configuration":"[Rn] 5f7 7s2","curious_fact":"Fue descubierto por la pareja que descubrió el plutonio."},
+            {"name":"Berquelio","symbol":"Bk","atomic_number":97,"atomic_mass":247,"category":"Actínidos","electron_configuration":"[Rn] 5f9 7s2","curious_fact":"Fue descubierto en un laboratorio de Berkeley."},
+            {"name":"Californium","symbol":"Cf","atomic_number":98,"atomic_mass":251,"category":"Actínidos","electron_configuration":"[Rn] 5f10 7s2","curious_fact":"Se usa como fuente de neutrones para investigación."},
+            {"name":"Einstinio","symbol":"Es","atomic_number":99,"atomic_mass":252,"category":"Actínidos","electron_configuration":"[Rn] 5f11 7s2","curious_fact":"Fue descubierto después de la bomba de prueba de California."},
+            {"name":"Fermio","symbol":"Fm","atomic_number":100,"atomic_mass":257,"category":"Actínidos","electron_configuration":"[Rn] 5f12 7s2","curious_fact":"Se forma principalmente en la lluvia ácida de pruebas nucleares."},
+            {"name":"Mendelevio","symbol":"Md","atomic_number":101,"atomic_mass":258,"category":"Actínidos","electron_configuration":"[Rn] 5f13 7s2","curious_fact":"Fue descubierto por el químico que descubrió el sodio."},
+            {"name":"Nobelio","symbol":"No","atomic_number":102,"atomic_mass":259,"category":"Actínidos","electron_configuration":"[Rn] 5f14 7s2","curious_fact":"Fue nombrado en honor al premio Nobel de Química."},
+            {"name":"Lawrencio","symbol":"Lr","atomic_number":103,"atomic_mass":262,"category":"Actínidos","electron_configuration":"[Rn] 5f14 7s2 7p1","curious_fact":"Es el elemento más pesado estable conocido."},
+            {"name":"Rutherfordio","symbol":"Rf","atomic_number":104,"atomic_mass":267,"category":"Metal de Transición","electron_configuration":"[Rn] 5f14 6d8 7s2","curious_fact":"Fue descubierto mediante colisiones de partículas."},
+            {"name":"Dubnio","symbol":"Db","atomic_number":105,"atomic_mass":268,"category":"Metal de Transición","electron_configuration":"[Rn] 5f14 6d9 7s2","curious_fact":"Fue descubierto en el Laboratorio Nacional de Dubna."},
+            {"name":"Seaborgio","symbol":"Sg","atomic_number":106,"atomic_mass":269,"category":"Metal de Transición","electron_configuration":"[Rn] 5f14 6d10 7s2","curious_fact":"Fue nombrado en honor al químico Glenn Seaborg."},
+            {"name":"Bohrio","symbol":"Bh","atomic_number":107,"atomic_mass":270,"category":"Metal de Transición","electron_configuration":"[Rn] 5f14 6d10 7s2 7p1","curious_fact":"Fue descubierto en el Laboratorio Nacional de Dubna."},
+            {"name":"Hassio","symbol":"Hs","atomic_number":108,"atomic_mass":269,"category":"Metal de Transición","electron_configuration":"[Rn] 5f14 6d10 7s2 7p2","curious_fact":"Fue descubierto en el Laboratorio Nacional de Dubna."},
+            {"name":"Meitnerio","symbol":"Mt","atomic_number":109,"atomic_mass":278,"category":"Metal de Transición","electron_configuration":"[Rn] 5f14 6d10 7s2 7p3","curious_fact":"Fue nombrado en honor a la física Lise Meitner."},
+            {"name":"Darmstadtio","symbol":"Ds","atomic_number":110,"atomic_mass":281,"category":"Metal de Transición","electron_configuration":"[Rn] 5f14 6d10 7s2 7p4","curious_fact":"Fue descubierto en el Laboratorio de Darmstadt."},
+            {"name":"Roentgenio","symbol":"Rg","atomic_number":111,"atomic_mass":282,"category":"Metal de Transición","electron_configuration":"[Rn] 5f14 6d10 7s2 7p5","curious_fact":"Fue nombrado en honor al físico Wilhelm Röntgen."},
+            {"name":"Copernicio","symbol":"Cn","atomic_number":112,"atomic_mass":285,"category":"Metal de Transición","electron_configuration":"[Rn] 5f14 6d10 7s2 7p6","curious_fact":"Fue descubierto en el Laboratorio de Darmstadt."},
+            {"name":"Nihonio","symbol":"Nh","atomic_number":113,"atomic_mass":286,"category":"Metal Post-Transición","electron_configuration":"[Rn] 5f14 6d10 7s2 7p6 8s1","curious_fact":"Fue descubierto en el Laboratorio Nacional de Japón."},
+            {"name":"Flerovio","symbol":"Fl","atomic_number":114,"atomic_mass":289,"category":"Metal Post-Transición","electron_configuration":"[Rn] 5f14 6d10 7s2 7p6 8s2","curious_fact":"Fue nombrado en honor al físico Yuri Oleinik."},
+            {"name":"Moscovio","symbol":"Mc","atomic_number":115,"atomic_mass":290,"category":"Metal Post-Transición","electron_configuration":"[Rn] 5f14 6d10 7s2 7p6 8s2 8p1","curious_fact":"Fue descubierto en el Laboratorio Nacional de Dubna."},
+            {"name":"Livermorio","symbol":"Lv","atomic_number":116,"atomic_mass":293,"category":"Metal Post-Transición","electron_configuration":"[Rn] 5f14 6d10 7s2 7p6 8s2 8p2","curious_fact":"Fue nombrado en honor al Laboratorio de Livermore."},
+            {"name":"Tenenso","symbol":"Ts","atomic_number":117,"atomic_mass":294,"category":"Halógeno","electron_configuration":"[Rn] 5f14 6d10 7s2 7p6 8s2 8p3","curious_fact":"Fue descubierto en el Laboratorio Nacional de Dubna."},
+            {"name":"Oganesón","symbol":"Og","atomic_number":118,"atomic_mass":294,"category":"Gas Noble","electron_configuration":"[Rn] 5f14 6d10 7s2 7p6 8s2 8p4","curious_fact":"Es el elemento más pesado y se forma en colisiones de iones."}
+        ];
+
+        let categoriaActiva = null;
+        const tabla = document.querySelector('.tabla');
+        const filtrosContainer = document.querySelector('.filtros');
+        const buscador = document.querySelector('#buscador');
+        const panel = document.querySelector('.panel');
+        const cerrar = document.querySelector('.cerrar');
+        const toggleBusqueda = document.querySelector('#searchToggle');
+
+        // Función para crear filtros en español
+        function crearFiltros() {
+            filtrosContainer.innerHTML = '<button class="filtro-btn activo" data-categoria="todo">Todo</button>';
+            categorias.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = 'filtro-btn';
+                btn.dataset.categoria = cat.toLowerCase().replace(/\s+/g, '-');
+                btn.textContent = cat;
+                filtrosContainer.appendChild(btn);
+            });
+        }
+
+        // Función para dibujar tabla
+        function dibujarTabla() {
+            tabla.innerHTML = '';
+            datosElementos.forEach(el => {
+                const div = document.createElement('div');
+                div.className = 'elemento';
+                div.style.backgroundColor = colores[el.category] || '#333';
+                div.dataset.categoria = el.category.toLowerCase().replace(/\s+/g, '-');
+                div.innerHTML = `<div class="simbolo">${el.symbol}</div><div class="nombre">${el.name}</div><div class="numero">${el.atomic_number}</div>`;
+                div.addEventListener('click', () => mostrarPanel(el));
+                tabla.appendChild(div);
+            });
+        }
+
+        // Función para mostrar panel con detalles
+        function mostrarPanel(el) {
+            // Almacenar elemento activo para orbitales
+            panel.elementoActivo = el;
+
+            panel.innerHTML = `
+                <h2>${el.name}</h2>
+                <div class="orbital-visual">
+                    <canvas id="orbitalCanvas"></canvas>
+                </div>
+                <div class="element-data">
+                    <p><span class="etiqueta">Símbolo:</span> ${el.symbol}</p>
+                    <p><span class="etiqueta">Número atómico:</span> ${el.atomic_number}</p>
+                    <p><span class="etiqueta">Masa:</span> ${el.atomic_mass}</p>
+                    <p><span class="etiqueta">Categoría:</span> ${el.category}</p>
+                    <p><span class="etiqueta">Configuración electrónica:</span> ${el.electron_configuration}</p>
+                    <p><span class="etiqueta">Dato curioso:</span> ${el.curious_fact}</p>
+                </div>
+            `;
+
+            panel.classList.add('active');
+
+            // Iniciar el motor de dibujo atómico
+            // Usamos setTimeout para asegurarnos de que el canvas está renderizado
+            setTimeout(() => {
+                const canvas = panel.querySelector('#orbitalCanvas');
+                if (canvas) {
+                    const electronsPerLevel = calculateElectronsPerLevel(el.atomic_number);
+                    AtomEngine(canvas, electronsPerLevel);
+                }
+            }, 10);
+        }
+
+        // Función para filtrar por categoría
+        function filtrarCategoria(cat) {
+            categoriaActiva = cat;
+            document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('activo'));
+
+            const targetBtn = event ? event.target : document.querySelector('.filtro-btn[data-categoria="todo"]');
+            targetBtn.classList.add('activo');
+
+            document.querySelectorAll('.elemento').forEach(el => {
+                if (cat === 'todo' || el.dataset.categoria === cat) {
+                    el.style.opacity = '1';
+                } else {
+                    el.style.opacity = '0.3';
+                }
+            });
+        }
+
+        // Funciones para búsqueda
+        function inicializarBusqueda() {
+            // Toggle para búsqueda
+            toggleBusqueda.addEventListener('click', function() {
+                buscador.classList.toggle('active');
+                if (buscador.classList.contains('active')) {
+                    buscador.focus();
+                }
+            });
+
+            // Cerrar búsqueda cuando se hace clic fuera
+            document.addEventListener('click', function(e) {
+                if (!buscador.contains(e.target) && !toggleBusqueda.contains(e.target)) {
+                    buscador.classList.remove('active');
+                }
+            });
+
+            // Evento de búsqueda
+            buscador.addEventListener('input', function() {
+                const texto = this.value.toLowerCase();
+                document.querySelectorAll('.elemento').forEach(el => {
+                    const nombre = el.querySelector('.nombre').textContent.toLowerCase();
+                    const simbolo = el.querySelector('.simbolo').textContent.toLowerCase();
+                    if (nombre.includes(texto) || simbolo.includes(texto)) {
+                        el.style.display = 'flex';
+                    } else {
+                        el.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Evento para cerrar panel
+        cerrar.addEventListener('click', () => panel.classList.remove('active'));
+
+        // Inicializar todo
+        crearFiltros();
+        dibujarTabla();
+        inicializarBusqueda();
+        inicializarOrbitales();
+    </script>
+</body>
+</html>
